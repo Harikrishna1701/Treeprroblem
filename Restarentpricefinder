@@ -1,0 +1,107 @@
+import java.io.*;
+import java.util.*;
+
+public class RestaurantFinder {
+
+    // Class to represent a food item with restaurantId, price, and foodName
+    static class FoodItem {
+        int restaurantId;
+        double price;
+        String foodName;
+
+        public FoodItem(int restaurantId, double price, String foodName) {
+            this.restaurantId = restaurantId;
+            this.price = price;
+            this.foodName = foodName;
+        }
+    }
+
+    // Method to read data from the CSV file
+    public static List<FoodItem> readDataFromFile(String filePath) {
+        List<FoodItem> foodItems = new ArrayList<>();
+
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            // Skip header line
+            br.readLine();
+
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(",");
+                try {
+                    // Parse restaurantId and price; skip if invalid
+                    int restaurantId = Integer.parseInt(parts[0]);
+                    double price = Double.parseDouble(parts[1]);
+                    String foodName = parts[2];
+
+                    // Add the valid food item to the list
+                    foodItems.add(new FoodItem(restaurantId, price, foodName));
+                } catch (NumberFormatException e) {
+                    // If there's an error in parsing numbers, skip this line
+                    System.err.println("Skipping invalid line: " + line);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return foodItems;
+    }
+
+    // Method to find the restaurant with the minimum total price for specified food items
+    public static String findMinimumPrice(List<FoodItem> foodItems, List<String> requestedItems) {
+        // Map to group food items by restaurant
+        Map<Integer, Map<String, Double>> restaurantMap = new HashMap<>();
+
+        // Fill the map with restaurant data
+        for (FoodItem item : foodItems) {
+            restaurantMap
+                .computeIfAbsent(item.restaurantId, k -> new HashMap<>())
+                .put(item.foodName, item.price);
+        }
+
+        double minPrice = Double.MAX_VALUE;
+        Integer bestRestaurant = null;
+
+        // Iterate over each restaurant to check if all requested items are available
+        for (Map.Entry<Integer, Map<String, Double>> entry : restaurantMap.entrySet()) {
+            Map<String, Double> menu = entry.getValue();
+
+            // Check if the restaurant has all requested food items
+            if (menu.keySet().containsAll(requestedItems)) {
+                double totalPrice = 0;
+                for (String item : requestedItems) {
+                    totalPrice += menu.get(item);
+                }
+
+                // Update the minimum price and best restaurant
+                if (totalPrice < minPrice) {
+                    minPrice = totalPrice;
+                    bestRestaurant = entry.getKey();
+                }
+            }
+        }
+
+        // Return the best result or "No matching restaurant found"
+        if (bestRestaurant != null) {
+            return bestRestaurant + ", " + minPrice;
+        } else {
+            return "No matching restaurant found";
+        }
+    }
+
+    public static void main(String[] args) {
+        // Specify the file path of your CSV file
+        String filePath = "C:\\Users\\Sahith\\OneDrive\\Documents\\question_two_data.csv";
+
+        // Read data from the file
+        List<FoodItem> foodItems = readDataFromFile(filePath);
+
+        // Test case 1: burger and tofu_log
+        List<String> requestedItems1 = Arrays.asList("burger", "tofu_log");
+        System.out.println("Output 1: " + findMinimumPrice(foodItems, requestedItems1));
+
+        // Test case 2: chef_salad and wine_spritzer
+        List<String> requestedItems2 = Arrays.asList("chef_salad", "wine_spritzer");
+        System.out.println("Output 2: " + findMinimumPrice(foodItems, requestedItems2));
+    }
+}
